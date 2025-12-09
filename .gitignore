@@ -1,0 +1,30 @@
+# Environment variables
+.env
+**/.env
+*.env
+
+# System
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Go
+backend/bin/
+backend/go.sum
+# Keep go.sum usually, but sometimes excluded. Standard practice is to KEEP go.sum. I will remove it from ignore unless forced.
+# Re-evaluating: standard go projects track go.sum.
+backend/tmp/
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# IDE
+.idea/
+.vscode/
