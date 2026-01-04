@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -23,6 +24,20 @@ import (
 	"gorm.io/gorm"
 )
 
+func openPostgresWithRetry(dsn string, maxAttempts int, delay time.Duration) (*gorm.DB, error) {
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		if err == nil {
+			return db, nil
+		}
+		lastErr = err
+		log.Printf("Postgres not ready (attempt %d/%d): %v", attempt, maxAttempts, err)
+		time.Sleep(delay)
+	}
+	return nil, lastErr
+}
+
 func main() {
 	// Initialize Fiber
 	app := fiber.New(fiber.Config{
@@ -40,19 +55,27 @@ func main() {
 	}
 
 	// Database Connection (Postgres)
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-		os.Getenv("BASE_DB_HOST"),
-		os.Getenv("BASE_DB_USER"),
-		os.Getenv("BASE_DB_PASSWORD"),
-		os.Getenv("BASE_DB_NAME"),
-		os.Getenv("BASE_DB_PORT"),
-	)
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+			os.Getenv("BASE_DB_HOST"),
+			os.Getenv("BASE_DB_USER"),
+			os.Getenv("BASE_DB_PASSWORD"),
+			os.Getenv("BASE_DB_NAME"),
+			os.Getenv("BASE_DB_PORT"),
+		)
+	}
 
-	pgDb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	pgDb, err := openPostgresWithRetry(dsn, 30, 2*time.Second)
 	if err != nil {
 		log.Fatalf("Could not connect to Postgres: %v", err)
 	}
 	log.Println("Connected to PostgreSQL")
+
+	// uuid-ossp is optional (we generate UUIDs in-app), but enable it when available.
+	if err := pgDb.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";").Error; err != nil {
+		log.Printf("Warning: could not enable uuid-ossp extension: %v", err)
+	}
 
 	// Database Connection (MongoDB)
 	mongoURI := os.Getenv("MONGO_URI")
@@ -75,9 +98,21 @@ func main() {
 	// Redis Connection
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL == "" {
-		redisURL = "redis://localhost:6379"
+		// Heuristic: if we're configured to talk to docker-compose Postgres service,
+		// assume Redis is also the docker-compose service name.
+		dbHost := os.Getenv("BASE_DB_HOST")
+		databaseURL := os.Getenv("DATABASE_URL")
+		if strings.EqualFold(dbHost, "postgres") || strings.Contains(databaseURL, "host=postgres") {
+			redisURL = "redis://redis:6379"
+		} else {
+			redisURL = "redis://localhost:6379"
+		}
 	}
-	opt, _ := redis.ParseURL(redisURL)
+	opt, err := redis.ParseURL(redisURL)
+	if err != nil {
+		log.Printf("Warning: invalid REDIS_URL %q (%v); falling back to localhost", redisURL, err)
+		opt = &redis.Options{Addr: "localhost:6379"}
+	}
 	redisClient := redis.NewClient(opt)
 
 	// Rate Limiter (100 req / minute)
@@ -100,7 +135,7 @@ func main() {
 	// AutoMigrate
 	err = pgDb.AutoMigrate(&models.User{}, &models.Tenant{}, &models.Warehouse{}, &models.Category{})
 	if err != nil {
-		log.Printf("Migration failed: %v", err)
+		log.Fatalf("Migration failed: %v", err)
 	}
 
 	// Handlers
@@ -131,14 +166,20 @@ func main() {
 	// Warehouses
 	protected.Post("/warehouses", inventoryHandler.CreateWarehouse)
 	protected.Get("/warehouses", inventoryHandler.GetWarehouses)
+	protected.Put("/warehouses/:id", inventoryHandler.UpdateWarehouse)
+	protected.Delete("/warehouses/:id", inventoryHandler.DeleteWarehouse)
 
 	// Categories
 	protected.Post("/categories", inventoryHandler.CreateCategory)
 	protected.Get("/categories", inventoryHandler.GetCategories)
+	protected.Put("/categories/:id", inventoryHandler.UpdateCategory)
+	protected.Delete("/categories/:id", inventoryHandler.DeleteCategory)
 
 	// Items
 	protected.Post("/items", inventoryHandler.CreateItem)
 	protected.Get("/items", inventoryHandler.GetItems)
+	protected.Put("/items/:id", inventoryHandler.UpdateItem)
+	protected.Delete("/items/:id", inventoryHandler.DeleteItem)
 
 	// AI
 	protected.Post("/ai/queue", aiHandler.QueueImageAnalysis)

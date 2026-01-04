@@ -8,7 +8,7 @@ import (
 )
 
 type Tenant struct {
-	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
 	Name      string    `gorm:"not null" json:"name"`
 	Plan      string    `gorm:"default:'demo'" json:"plan"`
 	CreatedAt time.Time `json:"created_at"`
@@ -20,7 +20,7 @@ func (Tenant) TableName() string {
 }
 
 type User struct {
-	ID           uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	ID           uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
 	TenantID     uuid.UUID `gorm:"type:uuid" json:"tenant_id"`
 	Email        string    `gorm:"unique;not null" json:"email"`
 	PasswordHash string    `json:"-"`
@@ -29,7 +29,7 @@ type User struct {
 }
 
 type Warehouse struct {
-	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
 	TenantID  uuid.UUID `gorm:"type:uuid;not null" json:"tenant_id"`
 	Name      string    `gorm:"not null" json:"name"`
 	Location  string    `json:"location"`
@@ -38,7 +38,7 @@ type Warehouse struct {
 }
 
 type Category struct {
-	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
 	TenantID  uuid.UUID `gorm:"type:uuid;not null" json:"tenant_id"`
 	Name      string    `gorm:"not null" json:"name"`
 	CreatedAt time.Time `json:"created_at"`

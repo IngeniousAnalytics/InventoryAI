@@ -16,6 +16,12 @@ func NewAIHandler(pub *queue.Publisher) *AIHandler {
 }
 
 func (h *AIHandler) QueueImageAnalysis(c *fiber.Ctx) error {
+	if h.Publisher == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "AI queue unavailable (RabbitMQ not connected)",
+		})
+	}
+
 	userID := c.Locals("user_id").(string)
 
 	// In a real app, you'd upload the file to S3/Local first.

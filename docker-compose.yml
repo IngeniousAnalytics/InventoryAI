@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Backend API
   backend:
@@ -10,12 +8,23 @@ services:
       - "8080:8080"
     environment:
       - DATABASE_URL=host=postgres user=postgres password=postgres dbname=inventory_ai port=5432 sslmode=disable
+      - BASE_DB_HOST=postgres
+      - BASE_DB_USER=postgres
+      - BASE_DB_PASSWORD=postgres
+      - BASE_DB_NAME=inventory_ai
+      - BASE_DB_PORT=5432
       - MONGO_URI=mongodb://mongo:27017
-      - REDIS_URL=redis:6379
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
     depends_on:
-      - postgres
-      - mongo
-      - redis
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
 
   # Frontend
   frontend:
@@ -39,6 +48,11 @@ services:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d inventory_ai"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   mongo:
     image: mongo:6-jammy

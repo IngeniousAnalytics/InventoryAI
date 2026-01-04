@@ -14,7 +14,7 @@ yarn-error.log
 
 # Go
 backend/bin/
-backend/go.sum
+# backend/go.sum
 # Keep go.sum usually, but sometimes excluded. Standard practice is to KEEP go.sum. I will remove it from ignore unless forced.
 # Re-evaluating: standard go projects track go.sum.
 backend/tmp/

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { LayoutDashboard, Package, Warehouse, LogOut } from "lucide-react";
+import { LayoutDashboard, Package, Warehouse, Tags, LogOut } from "lucide-react";
 
 export default function DashboardLayout({
     children,
@@ -50,6 +50,13 @@ export default function DashboardLayout({
                     >
                         <Warehouse className="w-5 h-5" />
                         Warehouses
+                    </Link>
+                    <Link
+                        href="/dashboard/categories"
+                        className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition"
+                    >
+                        <Tags className="w-5 h-5" />
+                        Categories
                     </Link>
                 </nav>
                 <div className="p-4 border-t mt-auto">

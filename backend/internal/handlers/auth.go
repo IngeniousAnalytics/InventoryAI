@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"time"
 
 	"os"
@@ -43,6 +44,8 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		Plan: "demo",
 	}
 	if err := h.DB.Create(&tenant).Error; err != nil {
+		// Keep response generic, but log root cause for local debugging.
+		log.Printf("register: create tenant failed: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not create tenant"})
 	}
 
@@ -56,6 +59,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	}
 
 	if err := h.DB.Create(&user).Error; err != nil {
+		log.Printf("register: create user failed: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not create user"})
 	}
 
